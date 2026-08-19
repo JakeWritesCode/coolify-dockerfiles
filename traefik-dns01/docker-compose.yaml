@@ -8,12 +8,10 @@ services:
     image: 'traefik:v3.7'
     restart: unless-stopped
 
-    # You'll need to set these as Coolify level env vars as coolify doesn't
-    # have an env thing for the proxy.
-    # sudo nano /data/coolify/source/.env
-    environment:
-      - PORKBUN_API_KEY=${PORKBUN_API_KEY}
-      - PORKBUN_SECRET_API_KEY=${PORKBUN_SECRET_API_KEY}
+    # You'll need to create an env file with your creds in.
+    env_file:
+      - /service-data/traefik/.env
+
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     networks:

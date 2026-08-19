@@ -1,20 +1,33 @@
-networks:
-  forgejo:
-    external: false
-
 services:
-  server:
-    image: codeberg.org/forgejo/forgejo:16
-    container_name: forgejo
+  forgejo:
+    image: 'codeberg.org/forgejo/forgejo:16'
     environment:
+      - SERVICE_URL_FORGEJO_3000
+      - 'FORGEJO__server__ROOT_URL=${SERVICE_URL_FORGEJO}'
+      - 'FORGEJO__migrations__ALLOWED_DOMAINS=${FORGEJO__migrations__ALLOWED_DOMAINS}'
+      - 'FORGEJO__migrations__ALLOW_LOCALNETWORKS=${FORGEJO__migrations__ALLOW_LOCALNETWORKS-false}'
       - USER_UID=1000
       - USER_GID=1000
-    restart: always
-    networks:
-      - forgejo
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=postgresql
+      - 'FORGEJO__database__NAME=${POSTGRESQL_DATABASE-forgejo}'
+      - FORGEJO__database__USER=$SERVICE_USER_POSTGRESQL
+      - FORGEJO__database__PASSWD=$SERVICE_PASSWORD_POSTGRESQL
     volumes:
-      - /service-data/forgejo:/data
-      - /etc/localtime:/etc/localtime:ro
+      - '/service-data/forgejo:/data'
+      - 'forgejo-timezone:/etc/timezone:ro'
+      - 'forgejo-localtime:/etc/localtime:ro'
     ports:
-      - '3000:3000'
-      - '222:22'
+      - '22222:22'
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://127.0.0.1:3000'
+      interval: 2s
+      timeout: 10s
+      retries: 15
