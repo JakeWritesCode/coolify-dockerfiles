@@ -1,24 +1,32 @@
 services:
   forgejo:
     image: 'codeberg.org/forgejo/forgejo:16'
+    restart: unless-stopped
+
     environment:
       - SERVICE_URL_FORGEJO_3000
       - 'FORGEJO__server__ROOT_URL=${SERVICE_URL_FORGEJO}'
+
       - 'FORGEJO__migrations__ALLOWED_DOMAINS=${FORGEJO__migrations__ALLOWED_DOMAINS}'
-      - 'FORGEJO__migrations__ALLOW_LOCALNETWORKS=${FORGEJO__migrations__ALLOW_LOCALNETWORKS-false}'
-      - USER_UID=1000
-      - USER_GID=1000
-      - FORGEJO__database__DB_TYPE=postgres
-      - FORGEJO__database__HOST=postgresql
-      - 'FORGEJO__database__NAME=${POSTGRESQL_DATABASE-forgejo}'
-      - FORGEJO__database__USER=$SERVICE_USER_POSTGRESQL
-      - FORGEJO__database__PASSWD=$SERVICE_PASSWORD_POSTGRESQL
+      - 'FORGEJO__migrations__ALLOW_LOCALNETWORKS=${FORGEJO__migrations__ALLOW_LOCALNETWORKS:-false}'
+
+      - 'USER_UID=${USER_UID:-1000}'
+      - 'USER_GID=${USER_GID:-1000}'
+
+      - 'FORGEJO__database__DB_TYPE=${FORGEJO_DB_TYPE:-postgres}'
+      - 'FORGEJO__database__HOST=${FORGEJO_DB_HOST}'
+      - 'FORGEJO__database__NAME=${FORGEJO_DB_NAME}'
+      - 'FORGEJO__database__USER=${FORGEJO_DB_USER}'
+      - 'FORGEJO__database__PASSWD=${FORGEJO_DB_PASSWORD}'
+
     volumes:
       - '/service-data/forgejo:/data'
       - 'forgejo-timezone:/etc/timezone:ro'
       - 'forgejo-localtime:/etc/localtime:ro'
+
     ports:
       - '22222:22'
+
     healthcheck:
       test:
         - CMD
@@ -28,3 +36,7 @@ services:
       interval: 2s
       timeout: 10s
       retries: 15
+
+volumes:
+  forgejo-timezone:
+  forgejo-localtime:
