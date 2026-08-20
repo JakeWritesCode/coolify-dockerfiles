@@ -10,6 +10,8 @@ services:
       - 'ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}'
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
       - 'GOOGLE_API_KEY=${GOOGLE_API_KEY}'
+      - 'FIRECRAWL_API_URL=${FIRECRAWL_API_URL}'
+      - 'FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}'
     volumes:
       - '/service-data/hermes/hermes-home:/home/hermes/.hermes'
       - '/service-data/hermes/hermes-agent-src:/opt/hermes'
