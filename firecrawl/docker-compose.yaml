@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/firecrawl/firecrawl@sha256:44f8e44e5cb7427c6e5759ec8f88950dfac2b4ee042ad00987303f53e69b96bc
+    image: ghcr.io/firecrawl/firecrawl
     restart: unless-stopped
 
     environment:
@@ -48,7 +48,7 @@ services:
     command: node dist/src/harness.js --start-docker
 
     ports:
-      - "3122:3002"
+      - "3002"
 
     healthcheck:
       test:
@@ -60,7 +60,7 @@ services:
       start_period: 60s
 
   playwright-service:
-    image: ghcr.io/firecrawl/playwright-service@sha256:1f6eba6403207d501a63d9b1d4685b6316b4fc7968fe64a5839ab1bfec9d1c14
+    image: ghcr.io/firecrawl/playwright-service
     restart: unless-stopped
 
     environment:
