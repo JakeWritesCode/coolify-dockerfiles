@@ -50,7 +50,7 @@ services:
     command: 'node dist/src/harness.js --start-docker'
 
     ports:
-      - '3122:3002'
+      - '3002'
 
     healthcheck:
       test:
