@@ -4,34 +4,35 @@ services:
     restart: unless-stopped
 
     environment:
-      HOST: 0.0.0.0
-      PORT: 3002
-      ENV: local
+      - SERVICE_URL_FIRECRAWL_3002
+      - HOST=0.0.0.0
+      - PORT=3002
+      - ENV=local
 
-      REDIS_URL: redis://default:${REDIS_PASSWORD}@valkey:6379/0
-      REDIS_RATE_LIMIT_URL: redis://default:${REDIS_PASSWORD}@valkey:6379/0
+      - REDIS_URL=redis://default:${REDIS_PASSWORD}@valkey:6379/0
+      - REDIS_RATE_LIMIT_URL=redis://default:${REDIS_PASSWORD}@valkey:6379/0
 
-      PLAYWRIGHT_MICROSERVICE_URL: http://playwright-service:3000/scrape
+      - PLAYWRIGHT_MICROSERVICE_URL=http://playwright-service:3000/scrape
 
-      NUQ_RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      - NUQ_RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
 
-      POSTGRES_HOST: nuq-postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: firecrawl
+      - POSTGRES_HOST=nuq-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=firecrawl
 
-      USE_DB_AUTHENTICATION: "false"
+      - USE_DB_AUTHENTICATION=false
 
-      TEST_API_KEY: ${FIRECRAWL_API_KEY}
-      BULL_AUTH_KEY: ${BULL_AUTH_KEY}
+      - TEST_API_KEY=${FIRECRAWL_API_KEY}
+      - BULL_AUTH_KEY=${BULL_AUTH_KEY}
 
-      SEARXNG_ENDPOINT: http://searxng-core:8080
+      - SEARXNG_ENDPOINT=http://searxng-core:8080
 
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      MODEL_NAME: ${MODEL_NAME:-}
-      MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - MODEL_NAME=${MODEL_NAME:-}
+      - MODEL_EMBEDDING_NAME=${MODEL_EMBEDDING_NAME:-}
 
     depends_on:
       valkey:
@@ -47,7 +48,7 @@ services:
 
     command: node dist/src/harness.js --start-docker
 
-    ports:
+    expose:
       - "3002"
 
     healthcheck:
@@ -64,8 +65,8 @@ services:
     restart: unless-stopped
 
     environment:
-      PORT: 3000
-      BLOCK_MEDIA: "true"
+      - PORT=3000
+      - BLOCK_MEDIA=true
 
     tmpfs:
       - /tmp/.cache:noexec,nosuid,size=1g
@@ -114,8 +115,8 @@ services:
     restart: unless-stopped
 
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
 
     volumes:
       - /service-data/firecrawl/rabbitmq:/var/lib/rabbitmq
@@ -136,10 +137,10 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: firecrawl
-      PGDATA: /var/lib/postgresql/data/pgdata
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=firecrawl
+      - PGDATA=/var/lib/postgresql/data/pgdata
 
     command:
       - postgres
@@ -152,7 +153,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -h localhost -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+        - 'pg_isready -h localhost -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"'
       interval: 5s
       timeout: 5s
       retries: 10
@@ -162,11 +163,11 @@ services:
     restart: "no"
 
     environment:
-      PGHOST: nuq-postgres
-      PGPORT: 5432
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: firecrawl
+      - PGHOST=nuq-postgres
+      - PGPORT=5432
+      - PGUSER=${POSTGRES_USER}
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+      - PGDATABASE=firecrawl
 
     command:
       - psql
