@@ -49,4 +49,4 @@ services:
       timeout: 5s
       retries: 3
     ports:
-      - '8787:8787'
+      - '8787'
