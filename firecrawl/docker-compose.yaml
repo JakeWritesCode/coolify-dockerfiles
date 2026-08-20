@@ -1,0 +1,191 @@
+services:
+  api:
+    image: ghcr.io/firecrawl/firecrawl@sha256:44f8e44e5cb7427c6e5759ec8f88950dfac2b4ee042ad00987303f53e69b96bc
+    restart: unless-stopped
+
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3002
+      ENV: local
+
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@valkey:6379/0
+      REDIS_RATE_LIMIT_URL: redis://default:${REDIS_PASSWORD}@valkey:6379/0
+
+      PLAYWRIGHT_MICROSERVICE_URL: http://playwright-service:3000/scrape
+
+      NUQ_RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+
+      POSTGRES_HOST: nuq-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: firecrawl
+
+      USE_DB_AUTHENTICATION: "false"
+
+      TEST_API_KEY: ${FIRECRAWL_API_KEY}
+      BULL_AUTH_KEY: ${BULL_AUTH_KEY}
+
+      SEARXNG_ENDPOINT: http://searxng-core:8080
+
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      MODEL_NAME: ${MODEL_NAME:-}
+      MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME:-}
+
+    depends_on:
+      valkey:
+        condition: service_healthy
+      playwright-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      nuq-postgres-init:
+        condition: service_completed_successfully
+      searxng-core:
+        condition: service_started
+
+    command: node dist/src/harness.js --start-docker
+
+    ports:
+      - "3122:3002"
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'node -e "require('\"'\"'http'\"'\"').get('\"'\"'http://localhost:3002/'\"'\"', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('\"'\"'error'\"'\"', () => process.exit(1))"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  playwright-service:
+    image: ghcr.io/firecrawl/playwright-service@sha256:1f6eba6403207d501a63d9b1d4685b6316b4fc7968fe64a5839ab1bfec9d1c14
+    restart: unless-stopped
+
+    environment:
+      PORT: 3000
+      BLOCK_MEDIA: "true"
+
+    tmpfs:
+      - /tmp/.cache:noexec,nosuid,size=1g
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  valkey:
+    image: valkey/valkey:9-alpine
+    restart: unless-stopped
+
+    command:
+      - valkey-server
+      - --save
+      - "30"
+      - "1"
+      - --loglevel
+      - warning
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --bind
+      - 0.0.0.0
+
+    volumes:
+      - /service-data/firecrawl/valkey:/data
+
+    healthcheck:
+      test:
+        - CMD
+        - valkey-cli
+        - -a
+        - ${REDIS_PASSWORD}
+        - --no-auth-warning
+        - ping
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+    volumes:
+      - /service-data/firecrawl/rabbitmq:/var/lib/rabbitmq
+
+    healthcheck:
+      test:
+        - CMD
+        - rabbitmq-diagnostics
+        - -q
+        - check_running
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nuq-postgres:
+    image: ghcr.io/firecrawl/nuq-postgres:latest
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: firecrawl
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    command:
+      - postgres
+      - -c
+      - cron.database_name=firecrawl
+
+    volumes:
+      - /service-data/firecrawl/postgres:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -h localhost -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nuq-postgres-init:
+    image: ghcr.io/firecrawl/nuq-postgres:latest
+    restart: "no"
+
+    environment:
+      PGHOST: nuq-postgres
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: firecrawl
+
+    command:
+      - psql
+      - -f
+      - /docker-entrypoint-initdb.d/010-nuq.sql
+
+    depends_on:
+      nuq-postgres:
+        condition: service_healthy
+
+  searxng-core:
+    container_name: searxng-core
+    image: searxng/searxng:latest
+    restart: unless-stopped
+
+    volumes:
+      - /service-data/firecrawl/searxng/config:/etc/searxng
+      - /service-data/firecrawl/searxng/cache:/var/cache/searxng
+
+    depends_on:
+      valkey:
+        condition: service_healthy
