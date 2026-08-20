@@ -2,10 +2,208 @@ services:
   api:
     image: ghcr.io/firecrawl/firecrawl
     restart: unless-stopped
+
     environment:
       - SERVICE_URL_FIRECRAWL_3002
       - HOST=0.0.0.0
       - PORT=3002
       - ENV=local
-    expose:
-      - "3002"
+
+      - 'REDIS_URL=redis://default:${SERVICE_PASSWORD_REDIS}@valkey:6379/0'
+      - 'REDIS_RATE_LIMIT_URL=redis://default:${SERVICE_PASSWORD_REDIS}@valkey:6379/0'
+
+      - 'PLAYWRIGHT_MICROSERVICE_URL=http://playwright-service:3000/scrape'
+
+      - 'NUQ_RABBITMQ_URL=amqp://$SERVICE_USER_RABBITMQ:$SERVICE_PASSWORD_RABBITMQ@rabbitmq:5672'
+
+      - POSTGRES_HOST=nuq-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=$SERVICE_USER_POSTGRES
+      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - 'POSTGRES_DB=${POSTGRES_DB:-firecrawl}'
+
+      - USE_DB_AUTHENTICATION=false
+      - 'AUTUMN_SECRET_KEY=${AUTUMN_SECRET_KEY:-}'
+
+      - TEST_API_KEY=$SERVICE_PASSWORD_FIRECRAWLAPI
+      - BULL_AUTH_KEY=$SERVICE_PASSWORD_BULLAUTH
+
+      - 'NUM_WORKERS_PER_QUEUE=${NUM_WORKERS_PER_QUEUE:-8}'
+      - 'CRAWL_CONCURRENT_REQUESTS=${CRAWL_CONCURRENT_REQUESTS:-10}'
+      - 'MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-5}'
+      - 'BROWSER_POOL_SIZE=${BROWSER_POOL_SIZE:-5}'
+      - 'HARNESS_STARTUP_TIMEOUT_MS=${HARNESS_STARTUP_TIMEOUT_MS:-60000}'
+
+      - EXTRACT_WORKER_PORT=3004
+      - WORKER_PORT=3005
+
+      - 'OPENAI_API_KEY=${OPENAI_API_KEY:-}'
+      - 'OPENAI_BASE_URL=${OPENAI_BASE_URL:-}'
+      - 'MODEL_NAME=${MODEL_NAME:-}'
+      - 'MODEL_EMBEDDING_NAME=${MODEL_EMBEDDING_NAME:-}'
+      - 'OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}'
+
+      - 'PROXY_SERVER=${PROXY_SERVER:-}'
+      - 'PROXY_USERNAME=${PROXY_USERNAME:-}'
+      - 'PROXY_PASSWORD=${PROXY_PASSWORD:-}'
+
+      - 'SEARXNG_ENDPOINT=http://searxng-core:${SEARXNG_PORT:-8080}'
+      - 'LOGGING_LEVEL=${LOGGING_LEVEL:-info}'
+
+    depends_on:
+      valkey:
+        condition: service_healthy
+      playwright-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      nuq-postgres-init:
+        condition: service_completed_successfully
+      searxng-core:
+        condition: service_started
+
+    command: 'node dist/src/harness.js --start-docker'
+
+    ports:
+      - '3122:3002'
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "node -e \"require('http').get('http://localhost:3002/', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))\""
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  playwright-service:
+    image: ghcr.io/firecrawl/playwright-service
+    restart: unless-stopped
+
+    environment:
+      - PORT=3000
+      - 'MAX_CONCURRENT_PAGES=${CRAWL_CONCURRENT_REQUESTS:-10}'
+      - 'PROXY_SERVER=${PROXY_SERVER:-}'
+      - 'PROXY_USERNAME=${PROXY_USERNAME:-}'
+      - 'PROXY_PASSWORD=${PROXY_PASSWORD:-}'
+      - 'BLOCK_MEDIA=${BLOCK_MEDIA:-true}'
+
+    tmpfs:
+      - '/tmp/.cache:noexec,nosuid,size=1g'
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'exit 0'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  valkey:
+    image: docker.io/valkey/valkey:9-alpine
+    restart: always
+
+    command: 'valkey-server --save 30 1 --loglevel warning --requirepass ${SERVICE_PASSWORD_REDIS} --bind 0.0.0.0'
+
+    volumes:
+      - '/service-data/firecrawl/valkey:/data'
+
+    healthcheck:
+      test:
+        - CMD
+        - valkey-cli
+        - '-a'
+        - '${SERVICE_PASSWORD_REDIS}'
+        - '--no-auth-warning'
+        - ping
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+
+    environment:
+      - RABBITMQ_DEFAULT_USER=$SERVICE_USER_RABBITMQ
+      - RABBITMQ_DEFAULT_PASS=$SERVICE_PASSWORD_RABBITMQ
+
+    command: rabbitmq-server
+
+    volumes:
+      - '/service-data/firecrawl/rabbitmq:/var/lib/rabbitmq'
+
+    healthcheck:
+      test:
+        - CMD
+        - rabbitmq-diagnostics
+        - '-q'
+        - check_running
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nuq-postgres:
+    image: ghcr.io/firecrawl/nuq-postgres:latest
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_USER=$SERVICE_USER_POSTGRES
+      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - 'POSTGRES_DB=${POSTGRES_DB:-firecrawl}'
+      - PGDATA=/var/lib/postgresql/data/pgdata
+
+    command:
+      - postgres
+      - '-c'
+      - 'cron.database_name=${POSTGRES_DB:-firecrawl}'
+
+    volumes:
+      - '/service-data/firecrawl/postgres:/var/lib/postgresql/data'
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -h localhost -U $${POSTGRES_USER} -d $${POSTGRES_DB}'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nuq-postgres-init:
+    image: ghcr.io/firecrawl/nuq-postgres:latest
+    restart: 'no'
+
+    environment:
+      - PGHOST=nuq-postgres
+      - PGPORT=5432
+      - PGUSER=$SERVICE_USER_POSTGRES
+      - PGPASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - 'PGDATABASE=${POSTGRES_DB:-firecrawl}'
+
+    command:
+      - psql
+      - '-f'
+      - /docker-entrypoint-initdb.d/010-nuq.sql
+
+    depends_on:
+      nuq-postgres:
+        condition: service_healthy
+
+  searxng-core:
+    container_name: searxng-core
+    image: 'docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}'
+    restart: always
+
+    ports:
+      - '${SEARXNG_HOST:+${SEARXNG_HOST}:}${SEARXNG_PORT:-8080}:${SEARXNG_PORT:-8080}'
+
+    env_file: ./.env
+
+    volumes:
+      - '/service-data/firecrawl/searxng/config:/etc/searxng/:Z'
+      - '/service-data/firecrawl/searxng/cache:/var/cache/searxng/'
+
+    depends_on:
+      valkey:
+        condition: service_healthy
