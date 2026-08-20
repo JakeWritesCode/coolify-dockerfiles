@@ -39,21 +39,20 @@ services:
 
   docker-in-docker:
     image: docker:dind
-    container_name: docker_dind
     privileged: true
+    restart: unless-stopped
+
     command:
       - dockerd
       - -H
       - tcp://0.0.0.0:2375
       - --tls=false
-    restart: unless-stopped
 
     volumes:
       - '/service-data/forgejo/runner/docker:/var/lib/docker'
 
   runner:
     image: 'data.forgejo.org/forgejo/runner:13'
-    container_name: runner
     restart: unless-stopped
 
     depends_on:
