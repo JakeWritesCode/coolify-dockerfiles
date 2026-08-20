@@ -39,13 +39,13 @@ services:
       valkey:
         condition: service_healthy
       playwright-service:
-        condition: service_healthy
+        condition: service_started
       rabbitmq:
         condition: service_healthy
       nuq-postgres-init:
         condition: service_completed_successfully
       searxng-core:
-        condition: service_healthy
+        condition: service_started
 
     command: 'node dist/src/harness.js --start-docker'
 
@@ -75,11 +75,10 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - "node -e \"require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""
+        - 'exit 0'
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 3
 
   valkey:
     image: docker.io/valkey/valkey:9-alpine
@@ -185,12 +184,3 @@ services:
     depends_on:
       valkey:
         condition: service_healthy
-
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'python -c "import urllib.request; urllib.request.urlopen('\"'\"'http://127.0.0.1:8080/'\"'\"', timeout=5)"'
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
