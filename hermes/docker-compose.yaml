@@ -14,6 +14,9 @@ services:
       - 'FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}'
       - 'FORGEJO_AGENT_TOKEN=${FORGEJO_AGENT_TOKEN}'
       - 'FORGEJO_SERVER=${FORGEJO_SERVER}'
+      - 'COOLIFY_API_TOKEN=${COOLIFY_API_TOKEN}'
+      - 'COOLIFY_API_URL=${COOLIFY_API_URL}'
+      - 'COOLIFY_CONTEXT=${COOLIFY_CONTEXT}'
     volumes:
       - '/service-data/hermes/hermes-home:/home/hermes/.hermes'
       - '/service-data/hermes/hermes-agent-src:/opt/hermes'
