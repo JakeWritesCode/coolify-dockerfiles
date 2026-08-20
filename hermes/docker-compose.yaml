@@ -12,6 +12,8 @@ services:
       - 'GOOGLE_API_KEY=${GOOGLE_API_KEY}'
       - 'FIRECRAWL_API_URL=${FIRECRAWL_API_URL}'
       - 'FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}'
+      - 'FORGEJO_AGENT_TOKEN=${FORGEJO_AGENT_TOKEN}'
+      - 'FORGEJO_SERVER=${FORGEJO_SERVER}'
     volumes:
       - '/service-data/hermes/hermes-home:/home/hermes/.hermes'
       - '/service-data/hermes/hermes-agent-src:/opt/hermes'
