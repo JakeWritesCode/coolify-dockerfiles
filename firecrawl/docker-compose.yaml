@@ -173,8 +173,6 @@ services:
       nuq-postgres:
         condition: service_healthy
 
-    exclude_from_hc: true
-
   searxng-core:
     container_name: searxng-core
     image: docker.io/searxng/searxng:latest
