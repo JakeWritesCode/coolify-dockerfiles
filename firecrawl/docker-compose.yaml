@@ -176,9 +176,6 @@ services:
     image: docker.io/searxng/searxng:latest
     restart: always
 
-    ports:
-      - '8080:8080'
-
     volumes:
       - '/service-data/firecrawl/searxng/config:/etc/searxng/:Z'
       - '/service-data/firecrawl/searxng/cache:/var/cache/searxng/'
