@@ -6,6 +6,18 @@ services:
       - HERMES_HOME=/home/hermes/.hermes
       - HERMES_UID=1000
       - HERMES_GID=1000
+      - HERMES_DOCKER_BINARY=/usr/bin/docker
+
+      # Safe bootstrap/fallback values. After deployment, persist the matching
+      # terminal.* settings via `hermes config set`, not config.yaml edits.
+      - TERMINAL_ENV=docker
+      - TERMINAL_CWD=/workspace
+      - TERMINAL_DOCKER_IMAGE=hermes-dev:local
+      - 'TERMINAL_DOCKER_VOLUMES=["/media/hermes-workspace:/workspace:rw","/var/run/docker.sock:/var/run/docker.sock"]'
+      - 'TERMINAL_DOCKER_EXTRA_ARGS=["--group-add","${DOCKER_GID:?Set DOCKER_GID to the host Docker socket numeric group ID}"]'
+      - TERMINAL_DOCKER_RUN_AS_HOST_USER=true
+      - TERMINAL_DOCKER_PERSIST_ACROSS_PROCESSES=true
+
       - 'OPENROUTER_API_KEY=${OPENROUTER_API_KEY}'
       - 'ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}'
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
@@ -17,17 +29,46 @@ services:
       - 'COOLIFY_API_TOKEN=${COOLIFY_API_TOKEN}'
       - 'COOLIFY_API_URL=${COOLIFY_API_URL}'
       - 'COOLIFY_CONTEXT=${COOLIFY_CONTEXT}'
+    group_add:
+      - '${DOCKER_GID:?Set DOCKER_GID to the host Docker socket numeric group ID}'
     volumes:
       - '/service-data/hermes/hermes-home:/home/hermes/.hermes'
       - '/service-data/hermes/hermes-agent-src:/opt/hermes'
       - '/media/hermes-workspace:/workspace'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     healthcheck:
       test:
         - CMD-SHELL
-        - 'test -d /home/hermes/.hermes || exit 1'
+        - 'test -d /home/hermes/.hermes && docker version --format "{{.Server.Version}}" >/dev/null'
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Ensures the exact terminal image is built and independently inspectable.
+  # Hermes creates its own labelled persistent terminal container from this
+  # same image for an active profile/session.
+  hermes-dev:
+    image: hermes-dev:local
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    user: '1000:1000'
+    working_dir: /workspace
+    group_add:
+      - '${DOCKER_GID:?Set DOCKER_GID to the host Docker socket numeric group ID}'
+    environment:
+      - HOME=/home/dev
+    volumes:
+      - '/media/hermes-workspace:/workspace'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'go version && node --version && npm --version && docker version --format "{{.Server.Version}}" >/dev/null'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
 
   hermes-webui:
     image: ghcr.io/nesquena/hermes-webui

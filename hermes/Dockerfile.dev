@@ -1,0 +1,73 @@
+# syntax=docker/dockerfile:1.7
+#
+# A reproducible terminal image for Hermes-driven local application work.
+# It deliberately contains compilers and Docker client tooling; it is not the
+# Hermes gateway/WebUI runtime image.
+FROM golang:1.27.0-bookworm AS go
+FROM node:22-bookworm-slim AS node
+
+FROM debian:13.4
+
+ARG GOLANGCI_LINT_VERSION=v2.13.1
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    GOPATH=/opt/go \
+    GOBIN=/usr/local/bin \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    PATH=/opt/go/bin:/usr/local/go/bin:${PATH}
+
+# General local-development tooling, plus PostgreSQL client tools for database
+# diagnostics. Docker is installed from Docker's signed repository so Compose
+# v2 and Buildx remain current and compatible with the host daemon.
+RUN apt-get -o Acquire::Retries=3 update \
+    && apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+        gnupg \
+        jq \
+        make \
+        netcat-openbsd \
+        openssh-client \
+        postgresql-client \
+        procps \
+        python3 \
+        python3-pip \
+        python3-venv \
+        ripgrep \
+        tini \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL --retry 3 https://download.docker.com/linux/debian/gpg \
+        | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && chmod a+r /etc/apt/keyrings/docker.gpg \
+    && printf '%s\n' \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian trixie stable" \
+        > /etc/apt/sources.list.d/docker.list \
+    && apt-get -o Acquire::Retries=3 update \
+    && apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+        docker-buildx-plugin \
+        docker-ce-cli \
+        docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copying from official images keeps the Go and Node toolchains pinned by the
+# FROM lines while avoiding third-party setup scripts in the runtime image.
+COPY --from=go /usr/local/go /usr/local/go
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && corepack enable \
+    && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION} \
+    && groupadd --gid 1000 dev \
+    && useradd --uid 1000 --gid dev --create-home --shell /bin/bash dev \
+    && install -d -o dev -g dev /workspace /opt/go
+
+USER 1000:1000
+ENV HOME=/home/dev
+WORKDIR /workspace
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["sleep", "infinity"]
