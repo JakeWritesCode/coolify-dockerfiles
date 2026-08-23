@@ -1,12 +1,18 @@
 # syntax=docker/dockerfile:1.7
 #
-# A reproducible terminal image for Hermes-driven local application work.
-# It deliberately contains compilers and Docker client tooling; it is not the
-# Hermes gateway/WebUI runtime image.
-FROM golang:1.27.0-bookworm AS go
+# Reproducible terminal image for Hermes-driven local application development.
+# This is deliberately a development/tooling image, not the gateway/WebUI image.
+#
+# Included:
+# - Go 1.27
+# - Node 22, npm, npx, Corepack (pnpm/Yarn)
+# - Docker CLI, Buildx, Compose v2
+# - golangci-lint
+# - Git, Make, build tooling, Python, PostgreSQL client utilities
+
 FROM node:22-bookworm-slim AS node
 
-FROM debian:13.4
+FROM golang:1.27.0-bookworm
 
 ARG GOLANGCI_LINT_VERSION=v2.13.1
 
@@ -16,12 +22,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NPM_CONFIG_UPDATE_NOTIFIER=false \
     PATH=/opt/go/bin:/usr/local/go/bin:${PATH}
 
-# General local-development tooling, plus PostgreSQL client tools for database
-# diagnostics. Docker is installed from Docker's signed repository so Compose
-# v2 and Buildx remain current and compatible with the host daemon.
+# General development dependencies:
+# - build-essential / Python: native Node modules and Go CGO dependencies
+# - postgresql-client: local database diagnostics and query-plan work
+# - Docker packages: host-daemon Docker CLI, Compose v2, and Buildx
 RUN apt-get -o Acquire::Retries=3 update \
     && apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
         bash \
+        build-essential \
         ca-certificates \
         curl \
         git \
@@ -42,7 +50,7 @@ RUN apt-get -o Acquire::Retries=3 update \
         | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
     && chmod a+r /etc/apt/keyrings/docker.gpg \
     && printf '%s\n' \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian trixie stable" \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" \
         > /etc/apt/sources.list.d/docker.list \
     && apt-get -o Acquire::Retries=3 update \
     && apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
@@ -51,23 +59,35 @@ RUN apt-get -o Acquire::Retries=3 update \
         docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
-# Copying from official images keeps the Go and Node toolchains pinned by the
-# FROM lines while avoiding third-party setup scripts in the runtime image.
-COPY --from=go /usr/local/go /usr/local/go
-COPY --from=node /usr/local/bin/node /usr/local/bin/node
-COPY --from=node /usr/local/bin/corepack /usr/local/bin/corepack
-COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+# Copy Node's complete /usr/local tree. This retains all of the official image's
+# Node executable plus its npm, npx, and Corepack symlinks and packages.
+# Do not recreate those links by hand.
+COPY --from=node /usr/local /usr/local
 
-RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
-    && corepack enable \
-    && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION} \
-    && groupadd --gid 1000 dev \
+# Keep installation steps independently observable in build logs. A future
+# missing command or package will therefore be apparent immediately.
+RUN node --version
+RUN npm --version
+RUN npx --version
+RUN corepack --version
+RUN go version
+RUN docker --version
+RUN docker compose version
+RUN docker buildx version
+
+# Pin the linter by version so local runs and CI use the same executable.
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
+RUN golangci-lint --version
+
+# Match the UID/GID that owns /media/hermes-workspace on the host.
+RUN groupadd --gid 1000 dev \
     && useradd --uid 1000 --gid dev --create-home --shell /bin/bash dev \
-    && install -d -o dev -g dev /workspace /opt/go
+    && install -d --owner=dev --group=dev /workspace /opt/go
 
 USER 1000:1000
+
 ENV HOME=/home/dev
+
 WORKDIR /workspace
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
