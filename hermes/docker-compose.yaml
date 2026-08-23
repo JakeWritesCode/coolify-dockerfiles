@@ -71,7 +71,10 @@ services:
     restart: unless-stopped
 
   hermes-webui:
-    image: ghcr.io/nesquena/hermes-webui
+    image: hermes-webui-docker:local
+    build:
+      context: .
+      dockerfile: hermes/Dockerfile.webui
     depends_on:
       - hermes-agent
     environment:
@@ -83,10 +86,14 @@ services:
       - WANTED_GID=1000
       - 'HERMES_WEBUI_PASSWORD=${SERVICE_PASSWORD_HERMESWEBUI}'
       - PYTHONPATH=/home/hermeswebui/.hermes/hermes-agent
+      - HERMES_DOCKER_BINARY=/usr/local/bin/docker
+    group_add:
+      - '${DOCKER_GID:?Set DOCKER_GID to the host Docker socket numeric group ID}'
     volumes:
       - '/service-data/hermes/hermes-home:/home/hermeswebui/.hermes'
       - '/service-data/hermes/hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent:ro'
       - '/media/hermes-workspace:/workspace'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     healthcheck:
       test:
         - CMD
