@@ -59,19 +59,18 @@ RUN apt-get -o Acquire::Retries=3 update \
         docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
-# Preserve Node's complete official /usr/local layout. This includes Node,
-# npm, npx, Corepack, and their package trees without recreating symlinks.
+# Preserve Node's full official /usr/local layout, including Node, npm, npx,
+# Corepack, and their package trees. Do not recreate Node symlinks manually.
 COPY --from=node /usr/local /usr/local
 
-# The WebUI terminal starts Bash with a conservative PATH that omits
-# /usr/local/go/bin. Expose every standard Go command in /usr/local/bin,
-# which remains on that path: go, gofmt, goimports-compatible tools, etc.
+# The WebUI terminal currently starts Bash with a conservative PATH that omits
+# /usr/local/go/bin. Make Go's standard commands available via /usr/local/bin,
+# which remains on that terminal PATH.
 RUN ln -sf /usr/local/go/bin/* /usr/local/bin/
 
-# Validate each foundational tool independently so an image-build failure is
-# explicit and not hidden in a long shell-command chain.
+# Validate each foundational tool independently. Do not run gofmt against
+# /dev/null: it requires actual Go source input.
 RUN go version
-RUN gofmt -w /dev/null
 RUN node --version
 RUN npm --version
 RUN npx --version
