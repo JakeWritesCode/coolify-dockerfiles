@@ -22,9 +22,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NPM_CONFIG_UPDATE_NOTIFIER=false \
     PATH=/opt/go/bin:/usr/local/go/bin:${PATH}
 
-# General development dependencies:
+# General local-development tooling:
 # - build-essential / Python: native Node modules and Go CGO dependencies
-# - postgresql-client: local database diagnostics and query-plan work
+# - postgresql-client: database inspection and EXPLAIN diagnostics
 # - Docker packages: host-daemon Docker CLI, Compose v2, and Buildx
 RUN apt-get -o Acquire::Retries=3 update \
     && apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
@@ -59,27 +59,32 @@ RUN apt-get -o Acquire::Retries=3 update \
         docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Node's complete /usr/local tree. This retains all of the official image's
-# Node executable plus its npm, npx, and Corepack symlinks and packages.
-# Do not recreate those links by hand.
+# Preserve Node's complete official /usr/local layout. This includes Node,
+# npm, npx, Corepack, and their package trees without recreating symlinks.
 COPY --from=node /usr/local /usr/local
 
-# Keep installation steps independently observable in build logs. A future
-# missing command or package will therefore be apparent immediately.
+# The WebUI terminal starts Bash with a conservative PATH that omits
+# /usr/local/go/bin. Expose every standard Go command in /usr/local/bin,
+# which remains on that path: go, gofmt, goimports-compatible tools, etc.
+RUN ln -sf /usr/local/go/bin/* /usr/local/bin/
+
+# Validate each foundational tool independently so an image-build failure is
+# explicit and not hidden in a long shell-command chain.
+RUN go version
+RUN gofmt -w /dev/null
 RUN node --version
 RUN npm --version
 RUN npx --version
 RUN corepack --version
-RUN go version
 RUN docker --version
 RUN docker compose version
 RUN docker buildx version
 
-# Pin the linter by version so local runs and CI use the same executable.
+# Pin the linter so local checks and CI execute the same version.
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
 RUN golangci-lint --version
 
-# Match the UID/GID that owns /media/hermes-workspace on the host.
+# Match the UID/GID that owns the shared host workspace.
 RUN groupadd --gid 1000 dev \
     && useradd --uid 1000 --gid dev --create-home --shell /bin/bash dev \
     && install -d --owner=dev --group=dev /workspace /opt/go
