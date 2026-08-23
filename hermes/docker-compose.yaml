@@ -51,7 +51,7 @@ services:
     image: hermes-dev:local
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: /hermes/Dockerfile.dev
     user: '1000:1000'
     working_dir: /workspace
     group_add:
