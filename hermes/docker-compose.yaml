@@ -58,6 +58,7 @@ services:
       - '${DOCKER_GID:?Set DOCKER_GID to the host Docker socket numeric group ID}'
     environment:
       - HOME=/home/dev
+      - COOLIFY_API_KEY=${COOLIFY_API_KEY}
     volumes:
       - '/media/hermes-workspace:/workspace'
       - '/var/run/docker.sock:/var/run/docker.sock'
