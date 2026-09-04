@@ -1,0 +1,51 @@
+services:
+  codex-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GOLANGCI_LINT_VERSION: v2.13.1
+        CODEX_VERSION: 0.147.0
+
+    init: false
+
+    ports:
+      # Bind to localhost unless direct LAN access is deliberately required.
+      - "127.0.0.1:2222:22"
+
+    environment:
+      HOME: /home/dev
+      FORGEJO_SERVER: https://forgejo.internal.jakeshomelab.me
+
+    volumes:
+      - /media/hermes-workspace:/workspace
+      - codex-home:/home/dev/.codex
+      - dev-cache:/home/dev/.cache
+      - coolify-config:/home/dev/.config/coolify
+
+      # The container can control the host Docker daemon. This is effectively
+      # host-root-equivalent access and is appropriate only in the trusted box.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # Mount only the public key. The entrypoint copies it into place with
+      # ownership and modes acceptable to sshd.
+      - ${HOME}/.ssh/id_ed25519.pub:/run/secrets/dev_authorized_keys:ro
+
+    # Set DOCKER_GID to the numeric group owning /var/run/docker.sock on the
+    # Docker host.
+    group_add:
+      - "${DOCKER_GID}"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/sbin/sshd -t && nc -z 127.0.0.1 22"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  codex-home:
+  dev-cache:
+  coolify-config:
