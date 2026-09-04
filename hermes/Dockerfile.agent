@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1.7
+
+FROM nousresearch/hermes-agent
+
+USER root
+
+COPY hermes/plugins/usage-meter /usr/local/share/hermes-plugins/usage-meter
+COPY hermes/install-local-plugins.sh /usr/local/bin/install-local-hermes-plugins
+
+RUN chmod 0755 /usr/local/bin/install-local-hermes-plugins \
+    && find /usr/local/share/hermes-plugins/usage-meter -type d -exec chmod 0755 {} + \
+    && find /usr/local/share/hermes-plugins/usage-meter -type f -exec chmod 0644 {} +
+
+ENTRYPOINT ["/usr/local/bin/install-local-hermes-plugins"]

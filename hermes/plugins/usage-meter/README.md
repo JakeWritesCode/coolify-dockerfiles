@@ -10,13 +10,13 @@ The separate analytics database uses SQLite WAL mode. It is not committed and su
 
 ## Install in this Coolify stack
 
-`hermes/docker-compose.yaml` mounts this directory at:
+`hermes/Dockerfile.agent` bakes the plugin into the Hermes image outside both persistent mounts. Its entrypoint copies the plugin into the profile home on every container start:
 
 ```text
 /home/hermes/.hermes/plugins/usage-meter
 ```
 
-After deploying the Compose change, enable the plugin once in the Hermes container/profile and restart the gateway:
+This avoids runtime bind mounts into Coolify's temporary source checkout, which is removed after deployment. After deploying the Compose change, enable the plugin once in the Hermes container/profile and restart the gateway:
 
 ```sh
 hermes plugins enable usage-meter
