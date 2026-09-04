@@ -1,6 +1,9 @@
 services:
   hermes-agent:
-    image: nousresearch/hermes-agent
+    image: hermes-agent-local:latest
+    build:
+      context: .
+      dockerfile: hermes/Dockerfile.agent
     command: 'gateway run'
     environment:
       - HERMES_HOME=/home/hermes/.hermes
@@ -35,7 +38,6 @@ services:
       - '/service-data/hermes/hermes-home:/home/hermes/.hermes'
       - '/service-data/hermes/hermes-agent-src:/opt/hermes'
       - '/media/hermes-workspace:/workspace'
-      - './plugins/usage-meter:/home/hermes/.hermes/plugins/usage-meter:ro'
       - '/var/run/docker.sock:/var/run/docker.sock'
     healthcheck:
       test:
