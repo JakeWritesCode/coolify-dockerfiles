@@ -87,6 +87,18 @@ def register(ctx) -> None:
         emoji="📏",
     )
     ctx.register_hook("post_llm_call", _on_post_llm_call)
+    ctx.register_system_prompt_section(
+        "usage-meter.discovery",
+        (
+            "The usage-meter plugin is installed and enabled. For software-delivery work, "
+            "do not conclude that `usage_meter` is unavailable merely because it is absent "
+            "from the initially loaded tool list. It is a deferred tool: use `tool_search` "
+            "for `usage meter work unit`, load `usage_meter` with `tool_describe`, then invoke "
+            "it with `tool_call`. Start an explicit work unit before issue-specific work and "
+            "follow the plugin skill for status and finalization."
+        ),
+        max_chars=700,
+    )
     skill_path = Path(__file__).parent / "skills" / "usage-meter" / "SKILL.md"
     ctx.register_skill(
         "usage-meter",
