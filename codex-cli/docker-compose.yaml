@@ -14,8 +14,11 @@ services:
       - "127.0.0.1:2222:22"
 
     environment:
-      HOME: /home/dev
-      FORGEJO_SERVER: https://forgejo.internal.jakeshomelab.me
+      - FORGEJO_AGENT_TOKEN=${FORGEJO_AGENT_TOKEN}
+      - FORGEJO_SERVER=${FORGEJO_SERVER}
+      - COOLIFY_API_URL=${COOLIFY_API_URL}
+      - COOLIFY_CONTEXT=${COOLIFY_CONTEXT}
+      - HOME=/home/dev
 
     volumes:
       - /media/hermes-workspace:/workspace
