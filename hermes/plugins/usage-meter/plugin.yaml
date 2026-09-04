@@ -1,0 +1,11 @@
+name: usage-meter
+version: 0.1.0
+description: Attribute Hermes model usage to delivered work units.
+author: Jake (JakeWritesCode), Hermes Agent
+license: MIT
+provides_tools:
+  - usage_meter
+provides_hooks:
+  - post_llm_call
+provides_skills:
+  - usage-meter

@@ -8,3 +8,7 @@ To combat this, this repo contains the 'state' of all my little Docker things.
 ## General Ideas:
 - All volumes are mounted to the root FS, so I can back them up somewhere and bring the applications back up in
 a DR scenario.
+
+## Hermes extensions
+
+- [`hermes/plugins/usage-meter`](hermes/plugins/usage-meter/README.md) attributes Hermes model usage to explicit Forgejo issue work units and persists finalized merge analytics outside application repositories.
