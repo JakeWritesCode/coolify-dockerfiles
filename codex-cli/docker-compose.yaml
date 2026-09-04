@@ -18,6 +18,7 @@ services:
       - FORGEJO_SERVER=${FORGEJO_SERVER}
       - COOLIFY_API_URL=${COOLIFY_API_URL}
       - COOLIFY_CONTEXT=${COOLIFY_CONTEXT}
+      - COOLIFY_API_KEY=${COOLIFY_API_KEY}
       - HOME=/home/dev
 
     volumes:
