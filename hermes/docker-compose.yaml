@@ -1,6 +1,9 @@
 services:
   hermes-agent:
-    image: nousresearch/hermes-agent
+    image: hermes-agent-local:latest
+    build:
+      context: .
+      dockerfile: hermes/Dockerfile.agent
     command: 'gateway run'
     environment:
       - HERMES_HOME=/home/hermes/.hermes
@@ -59,6 +62,10 @@ services:
     environment:
       - HOME=/home/dev
       - COOLIFY_API_KEY=${COOLIFY_API_KEY}
+      - FORGEJO_AGENT_TOKEN=${FORGEJO_AGENT_TOKEN}
+      - FORGEJO_SERVER=${FORGEJO_SERVER}
+      - COOLIFY_API_URL=${COOLIFY_API_URL}
+      - COOLIFY_CONTEXT=${COOLIFY_CONTEXT}
     volumes:
       - '/media/hermes-workspace:/workspace'
       - '/var/run/docker.sock:/var/run/docker.sock'
