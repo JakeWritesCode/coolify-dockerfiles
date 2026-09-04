@@ -29,7 +29,7 @@ hermes plugins doctor "$HERMES_HOME/plugins/usage-meter" --ci
 hermes plugins list
 ```
 
-The plugin exposes the `usage_meter` tool and the explicitly loadable `usage-meter:usage-meter` skill.
+The plugin exposes the deferred `usage_meter` tool and the explicitly loadable `usage-meter:usage-meter` skill. It also injects a short cache-safe discovery instruction into every new session, so agents know to resolve the deferred tool through `tool_search` → `tool_describe` → `tool_call` instead of incorrectly declaring it unavailable.
 
 ## Operations
 
