@@ -11,9 +11,9 @@ services:
       - "4096:4096"
 
     volumes:
-      - ./data/share:/home/opencode/.local/share/opencode
-      - ./data/state:/home/opencode/.local/state/opencode
-      - ./data/config:/home/opencode/.config/opencode
+      - /service-data/opencode/share:/home/opencode/.local/share/opencode
+      - /service-data/opencode/state:/home/opencode/.local/state/opencode
+      - /service-data/opencode/config:/home/opencode/.config/opencode
 
     environment:
       - TZ=${TZ}
