@@ -47,7 +47,11 @@ RUN apt-get -o Acquire::Retries=3 update \
     && rm -rf /var/lib/apt/lists/*
 
 # Coolify CLI
-RUN curl -fsSL https://raw.githubusercontent.com/coollabsio/coolify-cli/main/scripts/install.sh | bash
+RUN curl -fsSL \
+    https://raw.githubusercontent.com/coollabsio/coolify-cli/main/scripts/install.sh \
+    | bash -s -- --user \
+    && mv /root/.local/bin/coolify /usr/local/bin/coolify \
+    && chmod 0755 /usr/local/bin/coolify
 
 COPY --from=node /usr/local /usr/local
 
