@@ -11,7 +11,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     GOPATH=/opt/go \
     GOBIN=/usr/local/bin \
     NPM_CONFIG_UPDATE_NOTIFIER=false \
-    HOME=/home/dev \
     PATH=/opt/go/bin:/usr/local/go/bin:/home/dev/.local/bin:${PATH}
 
 RUN apt-get -o Acquire::Retries=3 update \
@@ -46,11 +45,6 @@ RUN apt-get -o Acquire::Retries=3 update \
         docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
-# Coolify CLI
-RUN curl -fsSL \
-    https://raw.githubusercontent.com/coollabsio/coolify-cli/main/scripts/install.sh \
-    | bash -s -- --user
-
 COPY --from=node /usr/local /usr/local
 
 RUN ln -sf /usr/local/go/bin/* /usr/local/bin/
@@ -62,6 +56,7 @@ RUN npm install --global \
 RUN go install \
         "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
 
+# Create the runtime user before anything writes into /home/dev.
 RUN groupadd --gid 1000 dev \
     && useradd \
         --uid 1000 \
@@ -74,16 +69,31 @@ RUN groupadd --gid 1000 dev \
         --group=dev \
         /workspace \
         /opt/go \
+        /home/dev/.config \
         /home/dev/.config/opencode \
+        /home/dev/.cache \
         /home/dev/.cache/opencode \
+        /home/dev/.local \
+        /home/dev/.local/bin \
+        /home/dev/.local/share \
         /home/dev/.local/share/opencode \
-        /home/dev/.local/state/opencode
+        /home/dev/.local/state \
+        /home/dev/.local/state/opencode \
+    && chown -R dev:dev /home/dev /workspace /opt/go
+
+ENV HOME=/home/dev
+
+# Install Coolify CLI into dev's own ~/.local/bin.
+RUN su - dev -c 'curl -fsSL \
+    https://raw.githubusercontent.com/coollabsio/coolify-cli/main/scripts/install.sh \
+    | bash -s -- --user'
 
 RUN go version \
     && node --version \
     && npm --version \
     && codex --version \
     && opencode --version \
+    && /home/dev/.local/bin/coolify version \
     && docker --version \
     && docker compose version \
     && docker buildx version \
