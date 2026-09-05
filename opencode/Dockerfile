@@ -46,6 +46,9 @@ RUN apt-get -o Acquire::Retries=3 update \
         docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
+# Coolify CLI
+RUN curl -fsSL https://raw.githubusercontent.com/coollabsio/coolify-cli/main/scripts/install.sh | bash
+
 COPY --from=node /usr/local /usr/local
 
 RUN ln -sf /usr/local/go/bin/* /usr/local/bin/
