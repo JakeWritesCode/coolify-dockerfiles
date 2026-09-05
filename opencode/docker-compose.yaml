@@ -1,0 +1,28 @@
+name: dev
+services:
+  opencode:
+    image: ghcr.io/pilinux/opencode:1.2.5
+    container_name: opencode
+
+    # listen on all interfaces INSIDE the container
+    command: opencode serve --hostname 0.0.0.0 --port 4096
+
+    ports:
+      - "4096:4096"
+
+    volumes:
+      - ./data/share:/home/opencode/.local/share/opencode
+      - ./data/state:/home/opencode/.local/state/opencode
+      - ./data/config:/home/opencode/.config/opencode
+
+    environment:
+      - TZ=${TZ}
+      - OPENCODE_SERVER_USERNAME=${OPENCODE_SERVER_USERNAME}
+      - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
+      - FORGEJO_AGENT_TOKEN=${FORGEJO_AGENT_TOKEN}
+      - FORGEJO_SERVER=${FORGEJO_SERVER}
+      - COOLIFY_API_URL=${COOLIFY_API_URL}
+      - COOLIFY_CONTEXT=${COOLIFY_CONTEXT}
+      - COOLIFY_API_KEY=${COOLIFY_API_KEY}
+
+    restart: unless-stopped
