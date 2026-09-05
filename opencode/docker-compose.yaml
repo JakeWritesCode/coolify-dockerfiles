@@ -14,13 +14,16 @@ services:
       - /service-data/opencode/cache:/home/dev/.cache/opencode
 
     environment:
-      - TZ
-      - OPENCODE_SERVER_USERNAME
-      - OPENCODE_SERVER_PASSWORD
-      - FORGEJO_AGENT_TOKEN
-      - FORGEJO_SERVER
-      - COOLIFY_API_URL
-      - COOLIFY_CONTEXT
-      - COOLIFY_API_KEY
+      TZ: ${TZ:-Europe/London}
+
+      OPENCODE_SERVER_USERNAME: ${OPENCODE_SERVER_USERNAME:?}
+      OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:?}
+
+      FORGEJO_AGENT_TOKEN: ${FORGEJO_AGENT_TOKEN:?}
+      FORGEJO_SERVER: ${FORGEJO_SERVER:?}
+
+      COOLIFY_API_URL: ${COOLIFY_API_URL:?}
+      COOLIFY_CONTEXT: ${COOLIFY_CONTEXT:?}
+      COOLIFY_API_KEY: ${COOLIFY_API_KEY:?}
 
     restart: unless-stopped
