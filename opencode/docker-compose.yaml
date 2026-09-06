@@ -12,6 +12,7 @@ services:
       - /service-data/opencode/state:/home/dev/.local/state/opencode
       - /service-data/opencode/config:/home/dev/.config/opencode
       - /service-data/opencode/cache:/home/dev/.cache/opencode
+      - /service-data/opencode/coolify:/home/dev/.config/coolify
 
       # The container can control the host Docker daemon. This is effectively
       # host-root-equivalent access and is appropriate only for this trusted
