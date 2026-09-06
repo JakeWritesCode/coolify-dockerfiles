@@ -13,6 +13,16 @@ services:
       - /service-data/opencode/config:/home/dev/.config/opencode
       - /service-data/opencode/cache:/home/dev/.cache/opencode
 
+      # The container can control the host Docker daemon. This is effectively
+      # host-root-equivalent access and is appropriate only for this trusted
+      # development environment.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    # Set DOCKER_GID to the numeric group owning /var/run/docker.sock on the
+    # Docker host (for example: stat -c '%g' /var/run/docker.sock).
+    group_add:
+      - "${DOCKER_GID:?Set DOCKER_GID to the host Docker socket group ID}"
+
     environment:
       TZ: ${TZ:-Europe/London}
 
