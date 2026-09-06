@@ -99,10 +99,13 @@ RUN go version \
     && docker buildx version \
     && golangci-lint --version
 
+RUN git config --global user.email "opencode@jakesaunders.dev"
+RUN git config --global user.name "opencode@jakesaunders.dev"
+
 USER dev
 WORKDIR /workspace
 
 EXPOSE 4096
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["opencode", "serve", "--hostname", "0.0.0.0", "--port", "4096"]
+CMD ["opencode", "serve", "--auto", "--hostname", "0.0.0.0", "--port", "4096"]
