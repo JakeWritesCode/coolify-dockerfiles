@@ -108,4 +108,4 @@ WORKDIR /workspace
 EXPOSE 4096
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["opencode", "serve", "--auto", "--hostname", "0.0.0.0", "--port", "4096"]
+CMD ["opencode", "serve", "--hostname", "0.0.0.0", "--port", "4096"]
